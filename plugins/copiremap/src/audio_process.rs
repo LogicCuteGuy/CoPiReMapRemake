@@ -31,6 +31,9 @@ pub struct AudioProcessParams {
     #[id = "resonance"]
     pub resonance: FloatParam,
 
+    #[id = "bandpass_mode"]
+    pub bandpass_mode: EnumParam<BandpassMode>,
+
     #[id = "pitch_shift"]
     pub pitch_shift: BoolParam,
 
@@ -85,6 +88,7 @@ impl AudioProcessParams {
                         })
                     }
                 ).with_step_size(0.01),
+            bandpass_mode: EnumParam::new("Bandpass Mode", BandpassMode::Iir),
             pitch_shift: BoolParam::new(
                 "Pitch Shift",
                 true,
@@ -175,6 +179,23 @@ pub enum PitchShiftNode {
     #[id = "12_node"]
     #[name = "12"]
     Node12,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Enum)]
+#[non_exhaustive]
+pub enum BandpassMode {
+    #[id = "iir"]
+    #[name = "IIR"]
+    Iir,
+    #[id = "fft_512"]
+    #[name = "FFT 512"]
+    Fft512,
+    #[id = "fft_1024"]
+    #[name = "FFT 1024"]
+    Fft1024,
+    #[id = "fft_2048"]
+    #[name = "FFT 2048"]
+    Fft2048,
 }
 
 pub struct AudioProcess96 {

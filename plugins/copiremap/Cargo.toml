@@ -8,15 +8,16 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies]
 nih_plug.workspace = true
-nih_plug_slint.workspace = true
-plugin-canvas.workspace = true
-slint.workspace = true
+nih_plug_vizia.workspace = true
 pitch_shift.workspace = true
 simple-eq.workspace = true
 #rust-music-theory.workspace = true
 serde.workspace = true
 crossbeam.workspace = true
 atomic_float.workspace = true
+image = { version = "0.24", default-features = false, features = ["png"] }
 
-[build-dependencies]
-slint-build = "1.5.1"
+[profile.release]
+lto = "thin"
+opt-level = 3
+codegen-units = 1

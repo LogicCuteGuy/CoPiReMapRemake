@@ -1,11 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "examples/demo",
     "plugins/copiremap",
-    "nih_plug_slint",
-    "plugin-canvas",
-    "plugin-canvas-slint",
     "xtask",
     "lib/pitch_shift",
     "lib/simple-eq"
@@ -14,11 +10,8 @@ members = [
 [workspace.dependencies]
 cursor-icon = "1.1"
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug/" }
-nih_plug_slint = { path = "nih_plug_slint" }
-plugin-canvas = { path = "plugin-canvas" }
-plugin-canvas-slint = { path = "plugin-canvas-slint" }
-raw-window-handle = "0.5"
-slint = { version = "1.5.1", default-features = false, features = ["accessibility", "compat-1-2", "std"] }
+nih_plug_iced = { git = "https://github.com/robbert-vdh/nih-plug/" }
+nih_plug_vizia = { git = "https://github.com/robbert-vdh/nih-plug/" }
 pitch_shift = { path = "lib/pitch_shift" }
 simple-eq = { path = "lib/simple-eq" }
 realfft = "3.3.0"
@@ -29,8 +22,3 @@ thiserror = "1.0.58"
 serde = { version = "1.0.198", features = ["derive"] }
 crossbeam = "0.8.4"
 atomic_float = "0.1.0"
-
-# Internal slint crate versions need to be pinned
-# since they don't maintain semver compatibility
-i-slint-core = "1.5.1"
-i-slint-renderer-skia = { version = "1.5.1", features = ["x11"] }

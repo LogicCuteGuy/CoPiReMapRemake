@@ -6,7 +6,6 @@ mod filter;
 mod pitch;
 mod gate;
 
-use std::collections::HashMap;
 use std::{sync::Arc, num::NonZeroU32};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use atomic_float::AtomicF64;
@@ -14,11 +13,8 @@ use nih_plug::util::db_to_gain;
 use nih_plug::{nih_export_clap, nih_export_vst3};
 use nih_plug::params::persist::PersistentField;
 use nih_plug::prelude::*;
-use nih_plug_slint::plugin_component_handle::{PluginComponentHandle, PluginComponentHandleParameterEvents};
-use nih_plug_slint::{WindowAttributes, editor::SlintEditor};
-use plugin_canvas::{LogicalSize, Event};
-use plugin_canvas::event::EventResponse;
-use slint::{SharedString, VecModel};
+use nih_plug_vizia::ViziaState;
+mod editor;
 use simple_eq::design::Curve;
 use crate::audio_process::{AudioProcess96, AudioProcessParams, PitchShiftNode};
 use crate::delay::{Delay, latency_average96};
@@ -26,8 +22,6 @@ use crate::filter::MyFilter;
 use crate::gate::MyGate;
 use crate::hertz_calculator::hz_cal_clh;
 use crate::key_note_midi_gen::{KeyNoteParams, MidiNote, NoteModeMidi};
-
-slint::include_modules!();
 
 #[derive(Params)]
 pub struct PluginParams {
@@ -214,156 +208,9 @@ impl GlobalParams {
     }
 }
 
-pub struct PluginComponent {
-    component: PluginWindow,
-    param_map: HashMap<SharedString, ParamPtr>,
-    latency: Arc<AtomicU32>,
-    gui_context: Arc<dyn GuiContext>,
-}
-
-impl PluginComponent {
-    fn new(params: Arc<PluginParams>, latency: Arc<AtomicU32>, gui_context: Arc<dyn GuiContext>) -> Self {
-        let component = PluginWindow::new().unwrap();
-        let param_map: HashMap<SharedString, _> = params.param_map().iter()
-            .map(|(name, param_ptr, _)| {
-                (name.clone().into(), *param_ptr)
-            })
-            .collect();
-
-        Self {
-            component,
-            param_map,
-            latency,
-            gui_context
-        }
-    }
-
-    fn convert_parameter(&self, id: &str) -> PluginParameter {
-        let param_ptr = self.param_map.get(id).unwrap();
-
-        let value = unsafe { param_ptr.unmodulated_normalized_value() };
-        let default_value = unsafe { param_ptr.default_normalized_value() };
-        let display_value = unsafe { param_ptr.normalized_value_to_string(value, true) };
-        let modulated_value = unsafe { param_ptr.modulated_normalized_value() };
-
-        PluginParameter {
-            id: id.into(),
-            default_value,
-            display_value: display_value.into(),
-            modulated_value,
-            value,
-        }
-    }
-
-    fn set_parameter(&self, id: &str, parameter: PluginParameter) {
-        let latency = self.latency.load(Ordering::SeqCst);
-        match id {
-            "scale_gui" => {
-                self.gui_context.request_resize();
-                self.component.set_scale_gui(parameter)
-            },
-            "pitch_shift_over_sampling" => {
-                self.component.set_latency(latency as i32);
-                self.component.set_pitch_shift_over_sampling(parameter);
-            },
-            "pitch_shift_window_duration_ms" => {
-                self.component.set_latency(latency as i32);
-                self.component.set_pitch_shift_window_duration_ms(parameter);
-            },
-            "bypass" => self.component.set_bypass(parameter),
-            "dry_gain" => self.component.set_dry_gain(parameter),
-            "wet_gain" => self.component.set_wet_gain(parameter),
-            "lhf_gain" => self.component.set_lhf_gain(parameter),
-            "note_c" => self.component.set_note_c(parameter),
-            "note_c_sharp" => self.component.set_note_c_sharp(parameter),
-            "note_d" => self.component.set_note_d(parameter),
-            "note_d_sharp" => self.component.set_note_d_sharp(parameter),
-            "note_e" => self.component.set_note_e(parameter),
-            "note_f" => self.component.set_note_f(parameter),
-            "note_f_sharp" => self.component.set_note_f_sharp(parameter),
-            "note_g" => self.component.set_note_g(parameter),
-            "note_g_sharp" => self.component.set_note_g_sharp(parameter),
-            "note_a" => self.component.set_note_a(parameter),
-            "note_a_sharp" => self.component.set_note_a_sharp(parameter),
-            "note_b" => self.component.set_note_b(parameter),
-            "low_note_off" => self.component.set_low_note(parameter),
-            "high_note_off" => self.component.set_high_note(parameter),
-            "low_note_off_mute" => self.component.set_low_note_off_mute(parameter),
-            "high_note_off_mute" => self.component.set_high_note_off_mute(parameter),
-            "hz_center" => self.component.set_hz_center(parameter),
-            "hz_tuning" => self.component.set_hz_tuning(parameter),
-            "note_mode_midi" => self.component.set_note_mode_midi(parameter),
-            "mute_off_key" => self.component.set_mute_off_key(parameter),
-            "round_up" => self.component.set_round_up(parameter),
-            "find_off_key" => self.component.set_find_off_key(parameter),
-            "in_key_gain" => self.component.set_in_key_gain(parameter),
-            "tuning_gain" => self.component.set_tuning_gain(parameter),
-            "off_key_gain" => self.component.set_off_key_gain(parameter),
-            "global_threshold" => self.component.set_global_threshold(parameter),
-            "global_threshold_flip" => self.component.set_global_threshold_flip(parameter),
-            "global_threshold_attack" => self.component.set_global_threshold_attack(parameter),
-            "global_threshold_release" => self.component.set_global_threshold_release(parameter),
-            "resonance" => self.component.set_resonance(parameter),
-            "threshold" => self.component.set_threshold(parameter),
-            "threshold_flip" => self.component.set_threshold_flip(parameter),
-            "threshold_attack" => self.component.set_threshold_attack(parameter),
-            "threshold_release" => self.component.set_threshold_release(parameter),
-            "pitch_shift" => self.component.set_pitch_shift(parameter),
-            "pitch_shift_node" => self.component.set_pitch_shift_node(parameter),
-            _ => (),
-        }
-    }
-}
-
-impl PluginComponentHandle for PluginComponent {
-    fn window(&self) -> &slint::Window {
-        self.component.window()
-    }
-
-    fn param_map(&self) -> &HashMap<SharedString, ParamPtr> {
-        &self.param_map
-    }
-
-    fn on_event(&self, _event: &Event) -> EventResponse {
-        EventResponse::Ignored
-    }
-
-    fn update_parameter_value(&self, id: &str) {
-        let parameter = self.convert_parameter(id);
-        self.set_parameter(id, parameter);
-    }
-
-    fn update_parameter_modulation(&self, id: &str) {
-        self.update_parameter_value(id);
-    }
-
-    fn update_all_parameters(&self) {
-        for id in self.param_map.keys() {
-            self.update_parameter_value(id); 
-        }
-    }
-}
-
-impl PluginComponentHandleParameterEvents for PluginComponent {
-    fn on_start_parameter_change(&self, mut f: impl FnMut(SharedString) + 'static) {
-        self.component.on_start_change(move |parameter| f(parameter.id));
-    }
-
-    fn on_parameter_changed(&self, mut f: impl FnMut(SharedString, f32) + 'static) {
-        self.component.on_changed(move |parameter, value| f(parameter.id, value));
-    }
-
-    fn on_end_parameter_change(&self, mut f: impl FnMut(SharedString) + 'static) {
-        self.component.on_end_change(move |parameter| f(parameter.id));
-    }
-
-    fn on_set_parameter_string(&self, mut f: impl FnMut(SharedString, SharedString) + 'static) {
-        self.component.on_set_string(move |parameter, string| f(parameter.id, string));
-    }
-}
-
 pub struct CoPiReMapPlugin {
     params: Arc<PluginParams>,
+    editor_state: Arc<ViziaState>,
     buffer_config: BufferConfig,
     midi_note: MidiNote,
     audio_process96: Vec<AudioProcess96>,
@@ -413,12 +260,15 @@ impl Default for CoPiReMapPlugin {
 
         let latency = Arc::new(AtomicU32::new(0));
 
+        let editor_state = editor::default_state();
+
         Self {
             params: Arc::new(PluginParams {
                 global: Arc::new(GlobalParams::new(update_lowpass.clone(), update_highpass.clone(), update_bpf_center_hz.clone(), update_pitch_shift_and_after_bandpass.clone(),  update_gui_scale.clone())),
                 audio_process: Arc::new(AudioProcessParams::new(update_pitch_shift_over_sampling.clone(), update_pitch_shift_window_duration_ms.clone(), update_pitch_shift_and_after_bandpass.clone(), update_bpf_center_hz.clone(), set_pitch_shift_12_node.clone())),
                 key_note: Arc::new(KeyNoteParams::new(update_key_note.clone(), update_key_note_12.clone())),
             }),
+            editor_state,
             buffer_config: BufferConfig {
                 sample_rate: 1.0,
                 min_buffer_size: None,
@@ -504,22 +354,30 @@ impl Plugin for CoPiReMapPlugin {
         }
     }
 
+    fn deactivate(&mut self) {
+        // Ensure all audio processing is fully stopped and cleaned up
+        for ap in self.audio_process96.iter_mut() {
+            ap.reset();
+        }
+        
+        // Clear all pending update flags to prevent access after deactivation
+        self.update_lowpass.store(false, Ordering::Release);
+        self.update_highpass.store(false, Ordering::Release);
+        self.update_pitch_shift_and_after_bandpass.store(false, Ordering::Release);
+        self.update_pitch_shift_over_sampling.store(false, Ordering::Release);
+        self.update_pitch_shift_window_duration_ms.store(false, Ordering::Release);
+        self.update_bpf_center_hz.store(false, Ordering::Release);
+        self.set_pitch_shift_12_node.store(false, Ordering::Release);
+        self.update_key_note.store(false, Ordering::Release);
+        self.update_key_note_12.store(false, Ordering::Release);
+        self.update_gui_scale.store(false, Ordering::Release);
+        
+        // Reset latency
+        self.latency.store(0, Ordering::Release);
+    }
+
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        let window_attributes = WindowAttributes::new(
-            LogicalSize::new(800.0, 380.0),
-            self.user_scale.clone(),
-        );
-        let editor = SlintEditor::new(
-            window_attributes,
-            {
-                let params = self.params.clone();
-                let latency = self.latency.clone();
-                move |_window, gui_context| {
-                    PluginComponent::new(params.clone(), latency.clone(), gui_context.clone())
-                }
-            },
-        );
-        Some(Box::new(editor))
+        editor::create_editor(self.params.clone(), self.editor_state.clone())
     }
 
     fn process(
@@ -647,11 +505,14 @@ impl Plugin for CoPiReMapPlugin {
                             channel: _channel,
                             note,
                             velocity: _velocity,
-                        } => if note >= 24 || note <= 119 {
-                            self.midi_note.midi_note[note as usize - 12] = true;
-                            match self.params.key_note.note_mode_midi.value() {
-                                NoteModeMidi::MidiWhistle | NoteModeMidi::MidiScale => self.midi_note.param_update(self.params.clone(), &mut self.audio_process96, &self.buffer_config),
-                                _ => {}
+                        } => {
+                            if (24..=119).contains(&note) {
+                                let idx = (note as usize) - 24; // map MIDI note 24..119 -> 0..95
+                                self.midi_note.midi_note[idx] = true;
+                                match self.params.key_note.note_mode_midi.value() {
+                                    NoteModeMidi::MidiWhistle | NoteModeMidi::MidiScale => self.midi_note.param_update(self.params.clone(), &mut self.audio_process96, &self.buffer_config),
+                                    _ => {}
+                                }
                             }
                         },
                         NoteEvent::NoteOff {
@@ -660,11 +521,14 @@ impl Plugin for CoPiReMapPlugin {
                             channel: _channel,
                             note,
                             velocity: _velocity,
-                        } => if note >= 24 || note <= 119 {
-                            self.midi_note.midi_note[note as usize - 12] = false;
-                            match self.params.key_note.note_mode_midi.value() {
-                                NoteModeMidi::MidiWhistle | NoteModeMidi::MidiScale => self.midi_note.param_update(self.params.clone(), &mut self.audio_process96, &self.buffer_config),
-                                _ => {}
+                        } => {
+                            if (24..=119).contains(&note) {
+                                let idx = (note as usize) - 24; // map MIDI note 24..119 -> 0..95
+                                self.midi_note.midi_note[idx] = false;
+                                match self.params.key_note.note_mode_midi.value() {
+                                    NoteModeMidi::MidiWhistle | NoteModeMidi::MidiScale => self.midi_note.param_update(self.params.clone(), &mut self.audio_process96, &self.buffer_config),
+                                    _ => {}
+                                }
                             }
                         },
                         _ => (),
@@ -726,6 +590,8 @@ impl Plugin for CoPiReMapPlugin {
     }
 }
 
+// GUI removed: no Vizia Data/Model or font/resource helpers
+
 impl ClapPlugin for CoPiReMapPlugin {
     const CLAP_ID: &'static str = "com.logiccuteguy.copiremap";
     const CLAP_DESCRIPTION: Option<&'static str> = None;
@@ -739,6 +605,7 @@ impl ClapPlugin for CoPiReMapPlugin {
     ];
 }
 
+// TODO: Interactive piano rows (click/drag to set low/high note)
 impl Vst3Plugin for CoPiReMapPlugin {
     const VST3_CLASS_ID: [u8; 16] = *b"CoPiReMapPlugins";
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = &[Vst3SubCategory::Fx, Vst3SubCategory::Filter, Vst3SubCategory::Eq];

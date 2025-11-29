@@ -1,0 +1,66 @@
+/* CoPiReMap Vizia Stylesheet */
+
+.header {
+    background-color: rgba(0, 0, 0, 0.6);
+    border-radius: 5px;
+    border-width: 3px;
+    border-color: rgba(255, 255, 255, 0.7);
+    child-space: 10px;
+}
+
+.title {
+    background: linear-gradient(120deg, #2256ff 0%, #ff3b3b 50%, #ffbb00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.main-content {
+    child-space: 5px;
+}
+
+.panel {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 5px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.3);
+    child-space: 5px;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.9);
+    child-top: 5px;
+    child-bottom: 5px;
+}
+
+.gain-slider {
+    height: 30px;
+}
+
+.pitch-slider {
+    height: 30px;
+}
+
+.filter-slider {
+    height: 30px;
+}
+
+.threshold-slider {
+    height: 30px;
+}
+
+.bypass-button {
+    width: 100px;
+    height: 30px;
+}
+
+.button-row {
+    child-space: 5px;
+}
+
+.status-bar {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    child-left: 10px;
+}
