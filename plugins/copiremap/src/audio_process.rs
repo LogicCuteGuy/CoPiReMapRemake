@@ -1,6 +1,6 @@
 use crate::delay::Delay;
 use crate::filter::MyFilter;
-use crate::gate::MyGate;
+use crate::gate::{DetectionMode, MyGate};
 use crate::hertz_calculator::{hz_cal_clh, hz_cal_tlh};
 use crate::key_note_midi_gen::{MidiNote, NoteModeMidi};
 use crate::pitch::MyPitch;
@@ -28,6 +28,9 @@ pub struct AudioProcessParams {
 
     #[id = "threshold_release"]
     pub threshold_release: FloatParam,
+
+    #[id = "threshold_mode"]
+    pub threshold_mode: EnumParam<DetectionMode>,
 
     #[id = "resonance"]
     pub resonance: FloatParam,
@@ -75,17 +78,18 @@ impl AudioProcessParams {
             threshold_attack: FloatParam::new(
                 "Threshold Attack",
                 0.1,
-                FloatRange::Linear { min: 0.1, max: 5.0 },
+                FloatRange::Linear { min: 0.1, max: 100.0 },
             )
             .with_unit("ms")
             .with_step_size(0.01),
             threshold_release: FloatParam::new(
                 "Threshold Release",
                 0.1,
-                FloatRange::Linear { min: 0.1, max: 5.0 },
+                FloatRange::Linear { min: 0.1, max: 100.0 },
             )
             .with_unit("ms")
             .with_step_size(0.01),
+            threshold_mode: EnumParam::new("Threshold Mode", DetectionMode::Rms),
             resonance: FloatParam::new(
                 "Resonance",
                 50.0,
@@ -498,6 +502,7 @@ impl AudioProcess96 {
         };
 
         let flip = params.audio_process.threshold_flip.value();
+        let detection_mode = params.audio_process.threshold_mode.value();
         self.open = self
             .gate
             .update_fast_param(
@@ -509,6 +514,7 @@ impl AudioProcess96 {
                 buf_size,
                 flip,
                 audio_id,
+                detection_mode,
             )
             .0;
         bpf * self.gate.get_param(flip, audio_id)
@@ -555,6 +561,7 @@ impl AudioProcess96 {
 
         // Apply threshold gate
         let flip = params.audio_process.threshold_flip.value();
+        let detection_mode = params.audio_process.threshold_mode.value();
         self.open = self
             .gate
             .update_fast_param(
@@ -566,6 +573,7 @@ impl AudioProcess96 {
                 buf_size,
                 flip,
                 audio_id,
+                detection_mode,
             )
             .0;
         bpf * self.gate.get_param(flip, audio_id)
@@ -592,6 +600,7 @@ impl AudioProcess96 {
             
             // Apply threshold gate based on the filtered signal (not the sine output)
             let flip = params.audio_process.threshold_flip.value();
+            let detection_mode = params.audio_process.threshold_mode.value();
             self.open = self
                 .gate
                 .update_fast_param(
@@ -603,6 +612,7 @@ impl AudioProcess96 {
                     buf_size,
                     flip,
                     audio_id,
+                    detection_mode,
                 )
                 .0;
             

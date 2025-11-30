@@ -20,7 +20,7 @@ use simple_eq::design::Curve;
 use crate::audio_process::{AlgorithmMode, AudioProcess96, AudioProcessParams};
 use crate::delay::{Delay, latency_average96};
 use crate::filter::MyFilter;
-use crate::gate::MyGate;
+use crate::gate::{DetectionMode, MyGate};
 use crate::hertz_calculator::hz_cal_clh;
 use crate::key_note_midi_gen::{KeyNoteParams, MidiNote, NoteModeMidi};
 
@@ -67,6 +67,9 @@ pub struct GlobalParams {
 
     #[id = "global_threshold_release"]
     pub global_threshold_release: FloatParam,
+
+    #[id = "global_threshold_mode"]
+    pub global_threshold_mode: EnumParam<DetectionMode>,
 
     #[id = "low_note_off"]
     pub low_note_off: IntParam,
@@ -135,12 +138,13 @@ impl GlobalParams {
             global_threshold_flip: BoolParam::new("Global Threshold Flip", false),
             global_threshold_attack: FloatParam::new("Global Threshold Attack", 0.1, FloatRange::Linear {
                 min: 0.1,
-                max: 5.0,
+                max: 100.0,
             }).with_unit("ms").with_step_size(0.01),
             global_threshold_release: FloatParam::new("Global Threshold Release", 0.1, FloatRange::Linear {
                 min: 0.1,
-                max: 5.0,
+                max: 100.0,
             }).with_unit("ms").with_step_size(0.01),
+            global_threshold_mode: EnumParam::new("Global Threshold Mode", DetectionMode::Rms),
             low_note_off: IntParam::new(
                 "Low Note Off",
                 36,
@@ -542,8 +546,9 @@ impl Plugin for CoPiReMapPlugin {
                     let size = channel.len();
                     for sample in channel.iter_mut() {
                         let flip = self.params.global.global_threshold_flip.value();
-                        let gate_zero = self.zero.update_fast_param(*sample, &self.buffer_config, db_to_gain(-99.0), 0.1, 0.1, size,false, i);
-                        let gate_on: (bool, bool) = self.gate.update_fast_param(*sample, &self.buffer_config, self.params.global.global_threshold.value(), self.params.global.global_threshold_attack.value(), self.params.global.global_threshold_release.value(), size, flip, i);
+                        let detection_mode = self.params.global.global_threshold_mode.value();
+                        let gate_zero = self.zero.update_fast_param(*sample, &self.buffer_config, db_to_gain(-99.0), 0.1, 0.1, size, false, i, detection_mode);
+                        let gate_on: (bool, bool) = self.gate.update_fast_param(*sample, &self.buffer_config, self.params.global.global_threshold.value(), self.params.global.global_threshold_attack.value(), self.params.global.global_threshold_release.value(), size, flip, i, detection_mode);
                         let delay = self.delay.process(*sample, i);
                         if gate_on.0 && gate_zero.0 {
                             let lpf_mute = match self.params.global.low_note_off_mute.value() { true => 0.0, false => self.lpf.process(delay, i) };

@@ -17,8 +17,6 @@ const LOGO_PNG: &[u8] = include_bytes!("../ui/resource/img/LogicColour.png");
 // COLORS
 // ============================================================================
 
-const ORANGE_BORDER: Color = Color::rgb(255, 140, 0);
-const GOLD: Color = Color::rgb(218, 165, 32);
 const CREAM: Color = Color::rgb(255, 248, 220);
 
 // ============================================================================
@@ -394,9 +392,19 @@ pub fn create_editor(
                     .col_between(Pixels(8.0));
                     
                     HStack::new(cx, |cx| {
-                        Label::new(cx, "Global Threshold Flip").font_size(9.0).color(CREAM);
-                        ParamButton::new(cx, EditorData::params, |p| &p.global.global_threshold_flip)
-                            .class("toggle-sm");
+                        VStack::new(cx, |cx| {
+                            Label::new(cx, "Mode").font_size(8.0).color(CREAM);
+                            ParamSlider::new(cx, EditorData::params, |p| &p.global.global_threshold_mode)
+                                .class("slider-sm");
+                        })
+                        .row_between(Pixels(2.0));
+                        
+                        VStack::new(cx, |cx| {
+                            Label::new(cx, "Flip").font_size(8.0).color(CREAM);
+                            ParamButton::new(cx, EditorData::params, |p| &p.global.global_threshold_flip)
+                                .class("toggle-sm");
+                        })
+                        .row_between(Pixels(2.0));
                     })
                     .col_between(Pixels(8.0));
                 })
@@ -467,9 +475,19 @@ pub fn create_editor(
                     .col_between(Pixels(8.0));
                     
                     HStack::new(cx, |cx| {
-                        Label::new(cx, "Threshold Flip").font_size(9.0).color(CREAM);
-                        ParamButton::new(cx, EditorData::params, |p| &p.audio_process.threshold_flip)
-                            .class("toggle-sm");
+                        VStack::new(cx, |cx| {
+                            Label::new(cx, "Mode").font_size(8.0).color(CREAM);
+                            ParamSlider::new(cx, EditorData::params, |p| &p.audio_process.threshold_mode)
+                                .class("slider-sm");
+                        })
+                        .row_between(Pixels(2.0));
+                        
+                        VStack::new(cx, |cx| {
+                            Label::new(cx, "Flip").font_size(8.0).color(CREAM);
+                            ParamButton::new(cx, EditorData::params, |p| &p.audio_process.threshold_flip)
+                                .class("toggle-sm");
+                        })
+                        .row_between(Pixels(2.0));
                     })
                     .col_between(Pixels(8.0));
                 })
