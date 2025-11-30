@@ -90,6 +90,7 @@ impl View for BypassImageButton {
 #[derive(Lens)]
 pub struct EditorData {
     pub params: Arc<PluginParams>,
+    pub latency: Arc<std::sync::atomic::AtomicU32>,
 }
 
 impl Model for EditorData {}
@@ -105,6 +106,7 @@ pub fn default_state() -> Arc<ViziaState> {
 pub fn create_editor(
     params: Arc<PluginParams>,
     editor_state: Arc<ViziaState>,
+    latency: Arc<std::sync::atomic::AtomicU32>,
 ) -> Option<Box<dyn Editor>> {
     create_vizia_editor(editor_state, ViziaTheming::Custom, move |cx, _| {
         // Register fonts
@@ -122,6 +124,7 @@ pub fn create_editor(
         // Build data model
         EditorData {
             params: params.clone(),
+            latency: latency.clone(),
         }
         .build(cx);
 
@@ -404,9 +407,9 @@ pub fn create_editor(
                 VStack::new(cx, |cx| {
                     HStack::new(cx, |cx| {
                         VStack::new(cx, |cx| {
-                            Label::new(cx, "Pitch Shift").font_size(10.0).color(CREAM);
-                            ParamButton::new(cx, EditorData::params, |p| &p.audio_process.pitch_shift)
-                                .class("toggle-btn");
+                            Label::new(cx, "Algorithm Mode").font_size(10.0).color(CREAM);
+                            ParamSlider::new(cx, EditorData::params, |p| &p.audio_process.algorithm_mode)
+                                .class("slider-sm");
                         })
                         .row_between(Pixels(2.0));
                         
@@ -428,12 +431,6 @@ pub fn create_editor(
 
                     HStack::new(cx, |cx| {
                         VStack::new(cx, |cx| {
-                            Label::new(cx, "Pitch Shift Node").font_size(8.0).color(CREAM);
-                            ParamSlider::new(cx, EditorData::params, |p| &p.audio_process.pitch_shift_node)
-                                .class("slider-sm");
-                        })
-                        .row_between(Pixels(2.0));
-                        VStack::new(cx, |cx| {
                             Label::new(cx, "Window ms").font_size(8.0).color(CREAM);
                             ParamSlider::new(cx, EditorData::params, |p| &p.audio_process.pitch_shift_window_duration_ms)
                                 .class("slider-sm");
@@ -442,12 +439,7 @@ pub fn create_editor(
                     })
                     .col_between(Pixels(8.0));
 
-                    VStack::new(cx, |cx| {
-                        Label::new(cx, "Bandpass Mode").font_size(8.0).color(CREAM);
-                        ParamSlider::new(cx, EditorData::params, |p| &p.audio_process.bandpass_mode)
-                            .class("slider-h");
-                    })
-                    .row_between(Pixels(2.0));
+
                 })
                 .row_between(Pixels(4.0))
                 .class("section-box");
@@ -496,7 +488,10 @@ pub fn create_editor(
 
                 Element::new(cx).width(Stretch(1.0));
 
-                Label::new(cx, "Latency: 0smp")
+                Label::new(cx, EditorData::latency.map(|l| {
+                    let latency_samples = l.load(std::sync::atomic::Ordering::Relaxed);
+                    format!("Latency: {}smp", latency_samples)
+                }))
                     .font_size(11.0)
                     .color(CREAM);
             })

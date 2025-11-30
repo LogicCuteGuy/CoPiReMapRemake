@@ -385,15 +385,11 @@ pub fn create_editor(
                     Label::new(cx, "Pitch Shift").font_size(10.0).color(Color::white());
                     HStack::new(cx, |cx| {
                         VStack::new(cx, |cx| {
-                            Label::new(cx, "P/S").font_size(8.0).color(Color::white());
-                            ParamButton::new(cx, EditorData::params, |p| &p.audio_process.pitch_shift)
-                                .width(Pixels(35.0));
-                        });
-                        VStack::new(cx, |cx| {
-                            Label::new(cx, "Node").font_size(8.0).color(Color::white());
-                            ParamSlider::new(cx, EditorData::params, |p| &p.audio_process.pitch_shift_node)
+                            Label::new(cx, "Algo").font_size(8.0).color(Color::white());
+                            ParamSlider::new(cx, EditorData::params, |p| &p.audio_process.algorithm_mode)
                                 .width(Pixels(55.0));
                         });
+
                         VStack::new(cx, |cx| {
                             Label::new(cx, "OS").font_size(8.0).color(Color::white());
                             ParamSlider::new(cx, EditorData::params, |p| &p.audio_process.pitch_shift_over_sampling)

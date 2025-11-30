@@ -1,13 +1,19 @@
 use simple_eq::design::{Curve, Design};
 use simple_eq::filter::Filter;
 
+#[allow(dead_code)]
+
+// ============================================================================
+// IIR Filter
+// ============================================================================
+
 pub struct MyFilter {
     filter: [Filter<f32>; 2],
 }
 
+#[allow(dead_code)]
 impl MyFilter {
     pub fn set(&mut self, curve: Curve, frequency: f32, resonance: f32, gain: f32, sample_rate: f32) {
-        // println!("{}", frequency);
         self.filter[0].set(curve, frequency, resonance, gain, sample_rate);
         self.filter[1].set(curve, frequency, resonance, gain, sample_rate);
     }

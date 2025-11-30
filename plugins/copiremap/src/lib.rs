@@ -5,6 +5,7 @@ mod delay;
 mod filter;
 mod pitch;
 mod gate;
+mod sine_gen;
 
 use std::{sync::Arc, num::NonZeroU32};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -16,7 +17,7 @@ use nih_plug::prelude::*;
 use nih_plug_vizia::ViziaState;
 mod editor;
 use simple_eq::design::Curve;
-use crate::audio_process::{AudioProcess96, AudioProcessParams, PitchShiftNode};
+use crate::audio_process::{AlgorithmMode, AudioProcess96, AudioProcessParams};
 use crate::delay::{Delay, latency_average96};
 use crate::filter::MyFilter;
 use crate::gate::MyGate;
@@ -226,7 +227,7 @@ pub struct CoPiReMapPlugin {
     update_pitch_shift_over_sampling: Arc<AtomicBool>,
     update_pitch_shift_window_duration_ms: Arc<AtomicBool>,
     update_bpf_center_hz: Arc<AtomicBool>,
-    set_pitch_shift_12_node: Arc<AtomicBool>,
+    update_algorithm_mode: Arc<AtomicBool>,
 
     update_key_note: Arc<AtomicBool>,
     update_key_note_12: Arc<AtomicBool>,
@@ -246,7 +247,7 @@ impl Default for CoPiReMapPlugin {
         let update_pitch_shift_over_sampling = Arc::new(AtomicBool::new(false));
         let update_pitch_shift_window_duration_ms = Arc::new(AtomicBool::new(false));
         let update_bpf_center_hz = Arc::new(AtomicBool::new(false));
-        let set_pitch_shift_12_node = Arc::new(AtomicBool::new(false));
+        let update_algorithm_mode = Arc::new(AtomicBool::new(false));
 
         let update_key_note = Arc::new(AtomicBool::new(false));
         let update_key_note_12 = Arc::new(AtomicBool::new(false));
@@ -265,7 +266,7 @@ impl Default for CoPiReMapPlugin {
         Self {
             params: Arc::new(PluginParams {
                 global: Arc::new(GlobalParams::new(update_lowpass.clone(), update_highpass.clone(), update_bpf_center_hz.clone(), update_pitch_shift_and_after_bandpass.clone(),  update_gui_scale.clone())),
-                audio_process: Arc::new(AudioProcessParams::new(update_pitch_shift_over_sampling.clone(), update_pitch_shift_window_duration_ms.clone(), update_pitch_shift_and_after_bandpass.clone(), update_bpf_center_hz.clone(), set_pitch_shift_12_node.clone())),
+                audio_process: Arc::new(AudioProcessParams::new(update_pitch_shift_over_sampling.clone(), update_pitch_shift_window_duration_ms.clone(), update_pitch_shift_and_after_bandpass.clone(), update_bpf_center_hz.clone(), update_algorithm_mode.clone())),
                 key_note: Arc::new(KeyNoteParams::new(update_key_note.clone(), update_key_note_12.clone())),
             }),
             editor_state,
@@ -288,7 +289,7 @@ impl Default for CoPiReMapPlugin {
             update_pitch_shift_over_sampling,
             update_pitch_shift_window_duration_ms,
             update_bpf_center_hz,
-            set_pitch_shift_12_node,
+            update_algorithm_mode,
             update_key_note,
             update_key_note_12,
             update_gui_scale,
@@ -334,11 +335,12 @@ impl Plugin for CoPiReMapPlugin {
     ) -> bool
     {
         self.buffer_config = *buffer_config;
+        
         let mut lowpass: f32 = 0.0;
-        hz_cal_clh((self.params.global.low_note_off.value() - 36) as u8, 0, &mut lowpass, self.params.global.hz_tuning.value(), !self.params.audio_process.pitch_shift.value());
+        hz_cal_clh((self.params.global.low_note_off.value() - 36) as u8, 0, &mut lowpass, self.params.global.hz_tuning.value(), self.params.audio_process.algorithm_mode.value() == AlgorithmMode::Off);
         self.lpf.set(Curve::Lowpass, lowpass, 1.0, 0.0, self.buffer_config.sample_rate);
         let mut highpass: f32 = 0.0;
-        hz_cal_clh((self.params.global.high_note_off.value() - 36) as u8, 0, &mut highpass, self.params.global.hz_tuning.value(), !self.params.audio_process.pitch_shift.value());
+        hz_cal_clh((self.params.global.high_note_off.value() - 36) as u8, 0, &mut highpass, self.params.global.hz_tuning.value(), self.params.audio_process.algorithm_mode.value() == AlgorithmMode::Off);
         self.hpf.set(Curve::Highpass, highpass, 1.0, 0.0, self.buffer_config.sample_rate);
         for (i, audio_process) in self.audio_process96.iter_mut().enumerate() {
             audio_process.setup(self.params.clone(), i as u8, &self.buffer_config, &self.midi_note);
@@ -367,7 +369,7 @@ impl Plugin for CoPiReMapPlugin {
         self.update_pitch_shift_over_sampling.store(false, Ordering::Release);
         self.update_pitch_shift_window_duration_ms.store(false, Ordering::Release);
         self.update_bpf_center_hz.store(false, Ordering::Release);
-        self.set_pitch_shift_12_node.store(false, Ordering::Release);
+        self.update_algorithm_mode.store(false, Ordering::Release);
         self.update_key_note.store(false, Ordering::Release);
         self.update_key_note_12.store(false, Ordering::Release);
         self.update_gui_scale.store(false, Ordering::Release);
@@ -377,7 +379,7 @@ impl Plugin for CoPiReMapPlugin {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        editor::create_editor(self.params.clone(), self.editor_state.clone())
+        editor::create_editor(self.params.clone(), self.editor_state.clone(), self.latency.clone())
     }
 
     fn process(
@@ -419,11 +421,11 @@ impl Plugin for CoPiReMapPlugin {
                 {
                     let mut lowpass: f32 = 0.0;
                     let low_note = self.params.global.low_note_off.value() as usize - 36;
-                    hz_cal_clh(low_note as u8, 0, &mut lowpass, self.params.global.hz_tuning.value(), !self.params.audio_process.pitch_shift.value());
+                    hz_cal_clh(low_note as u8, 0, &mut lowpass, self.params.global.hz_tuning.value(), self.params.audio_process.algorithm_mode.value() == AlgorithmMode::Off);
                     self.lpf.set_frequency(lowpass);
                     self.audio_process96.iter_mut().for_each(
                         |ap| {
-                            ap.set_pitch_shift_12_node(self.params.clone(), &self.buffer_config, &self.midi_note);
+                            ap.set_algorithm_mode(self.params.clone(), &self.buffer_config, &self.midi_note);
                         }
                     );
                 }
@@ -433,7 +435,7 @@ impl Plugin for CoPiReMapPlugin {
                     .is_ok()
                 {
                     let mut highpass: f32 = 0.0;
-                    hz_cal_clh((self.params.global.high_note_off.value() - 36) as u8, 0, &mut highpass, self.params.global.hz_tuning.value(), !self.params.audio_process.pitch_shift.value());
+                    hz_cal_clh((self.params.global.high_note_off.value() - 36) as u8, 0, &mut highpass, self.params.global.hz_tuning.value(), self.params.audio_process.algorithm_mode.value() == AlgorithmMode::Off);
                     self.hpf.set_frequency(highpass);
                 }
                 if self
@@ -475,12 +477,12 @@ impl Plugin for CoPiReMapPlugin {
                     }
                 }
                 if self
-                    .set_pitch_shift_12_node
+                    .update_algorithm_mode
                     .compare_exchange(true, false, Ordering::SeqCst, Ordering::SeqCst)
                     .is_ok()
                 {
                     for ap in self.audio_process96.iter_mut() {
-                        ap.set_pitch_shift_12_node(self.params.clone(), &self.buffer_config, &self.midi_note);
+                        ap.set_algorithm_mode(self.params.clone(), &self.buffer_config, &self.midi_note);
                     }
                 }
                 if self
@@ -534,8 +536,8 @@ impl Plugin for CoPiReMapPlugin {
                         _ => (),
                     }
                 }
-                let mut pitch: [f32; 12] = [0.0; 12];
                 let mut audio_process: f32 = 0.0;
+                
                 for (i, channel) in buffer.as_slice().iter_mut().enumerate() {
                     let size = channel.len();
                     for sample in channel.iter_mut() {
@@ -546,34 +548,60 @@ impl Plugin for CoPiReMapPlugin {
                         if gate_on.0 && gate_zero.0 {
                             let lpf_mute = match self.params.global.low_note_off_mute.value() { true => 0.0, false => self.lpf.process(delay, i) };
                             let hpf_mute = match self.params.global.high_note_off_mute.value() { true => 0.0, false => self.hpf.process(delay, i) };
-                            match self.params.audio_process.pitch_shift_node.value() {
-                                PitchShiftNode::Node12 => {
-                                    let low_note = self.params.global.low_note_off.value() as usize - 36;
-                                    let mut index = low_note % 12;
-                                    self.audio_process96.iter_mut().filter(|ap| ap.note >= low_note as u8 && ap.note <= (self.params.global.high_note_off.value() as usize - 36) as u8).for_each(
-                                        |ap| {
-                                            if index >= 12 {
-                                                index = 0;
+                            
+                            let algorithm_mode = self.params.audio_process.algorithm_mode.value();
+                            
+                            match algorithm_mode {
+                                AlgorithmMode::PitchShift => {
+                                    // PitchShift mode: PitchShift -> Bandpass (IIR only, no FFT)
+                                    let note_mode = self.params.key_note.note_mode_midi.value();
+                                    
+                                    match note_mode {
+                                        NoteModeMidi::Scale | NoteModeMidi::MidiScale => {
+                                            // 12 pitch shifters mode: reuse shifters cyclically
+                                            let low_note = self.params.global.low_note_off.value() as usize - 36;
+                                            let mut pitch: [f32; 12] = [0.0; 12];
+                                            
+                                            // Single loop: compute pitch shifts and apply bandpass + gate
+                                            let mut index = low_note % 12;
+                                            for ap in self.audio_process96.iter_mut().filter(|ap| ap.note >= low_note as u8 && ap.note <= (self.params.global.high_note_off.value() as usize - 36) as u8) {
+                                                if index >= 12 {
+                                                    index = 0;
+                                                }
+                                                
+                                                // Compute pitch shift if this note has a tuning
+                                                if ap.tuning.is_some() {
+                                                    pitch[index] = ap.process_pitch_only(*sample, i);
+                                                }
+                                                
+                                                // Apply bandpass + gate using the pitch-shifted signal
+                                                let input_param: f32 = if ap.note_pitch == 0 { self.params.audio_process.in_key_gain.value() } else if ap.note_pitch == -128 { self.params.audio_process.off_key_gain.value() } else { self.params.audio_process.tuning_gain.value() };
+                                                audio_process += ap.process_bpf_with_gate(pitch[index], i, input_param, self.params.clone(), &self.buffer_config, size);
+                                                index += 1;
                                             }
-                                            let input_param: f32 = if ap.note_pitch == 0 { self.params.audio_process.in_key_gain.value() } else if ap.note_pitch == -128 { self.params.audio_process.off_key_gain.value() } else if !self.params.audio_process.pitch_shift.value() { self.params.audio_process.off_key_gain.value() } else { self.params.audio_process.tuning_gain.value() };
-                                            if ap.tuning.is_some() {
-                                                pitch[index] = ap.process(*sample, self.params.clone(), i, input_param, &self.buffer_config, size);
-                                            }
-                                            if input_param > db_to_gain(-60.0) {
-                                                audio_process += ap.process_bpf(pitch[index], i, input_param, self.params.clone());
-                                                // println!("Work {}, {}", ii, ap.note);
-                                            }
-                                            index += 1;
                                         }
-                                    );
+                                        NoteModeMidi::MidiWhistle => {
+                                            // 96 pitch shifters mode: each note has its own shifter
+                                            for ap in self.audio_process96.iter_mut().filter(|ap| ap.note >= (self.params.global.low_note_off.value() as usize - 36) as u8 && ap.note <= (self.params.global.high_note_off.value() as usize - 36) as u8) {
+                                                let input_param: f32 = if ap.note_pitch == 0 { self.params.audio_process.in_key_gain.value() } else if ap.note_pitch == -128 { self.params.audio_process.off_key_gain.value() } else { self.params.audio_process.tuning_gain.value() };
+                                                audio_process += ap.process(*sample, self.params.clone(), i, input_param, &self.buffer_config, size);
+                                            }
+                                        }
+                                    }
                                 }
-                                PitchShiftNode::Node96 => {
-                                    self.audio_process96.iter_mut().filter(|ap| ap.note >= (self.params.global.low_note_off.value() as usize - 36) as u8 && ap.note <= (self.params.global.high_note_off.value() as usize - 36) as u8).for_each(
-                                        |ap| {
-                                            let input_param: f32 = if ap.note_pitch == 0 { self.params.audio_process.in_key_gain.value() } else if ap.note_pitch == -128 { self.params.audio_process.off_key_gain.value() } else if !self.params.audio_process.pitch_shift.value() { self.params.audio_process.off_key_gain.value() } else { self.params.audio_process.tuning_gain.value() };
-                                            audio_process += ap.process(*sample, self.params.clone(), i, input_param, &self.buffer_config, size);
-                                        }
-                                    );
+                                AlgorithmMode::Off => {
+                                    // Off mode: Bandpass (IIR) -> Output
+                                    for ap in self.audio_process96.iter_mut().filter(|ap| ap.note >= (self.params.global.low_note_off.value() as usize - 36) as u8 && ap.note <= (self.params.global.high_note_off.value() as usize - 36) as u8) {
+                                        let input_param: f32 = if ap.note_pitch == 0 { self.params.audio_process.in_key_gain.value() } else if ap.note_pitch == -128 { self.params.audio_process.off_key_gain.value() } else { self.params.audio_process.tuning_gain.value() };
+                                        audio_process += ap.process_bpf(delay, i, input_param, self.params.clone());
+                                    }
+                                }
+                                AlgorithmMode::SineGen => {
+                                    // SineGen mode: Bandpass (IIR) -> Sine Generator
+                                    for ap in self.audio_process96.iter_mut().filter(|ap| ap.note >= (self.params.global.low_note_off.value() as usize - 36) as u8 && ap.note <= (self.params.global.high_note_off.value() as usize - 36) as u8) {
+                                        let input_param: f32 = if ap.note_pitch == 0 { self.params.audio_process.in_key_gain.value() } else if ap.note_pitch == -128 { self.params.audio_process.off_key_gain.value() } else { self.params.audio_process.tuning_gain.value() };
+                                        audio_process += ap.process_sine_gen_iir(delay, i, input_param, self.params.clone(), &self.buffer_config, size);
+                                    }
                                 }
                             }
                             *sample = (((audio_process * self.params.global.wet_gain.value()) + (delay * self.params.global.dry_gain.value()) + ((lpf_mute + hpf_mute) * self.params.global.lhf_gain.value())) * self.gate.get_param(flip, i)) * self.zero.get_param(false, i);
