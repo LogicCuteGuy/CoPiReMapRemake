@@ -1,0 +1,44 @@
+import { VerticalBox } from "std-widgets.slint";
+import { PluginParameter } from "parameter.slint";
+
+export component ParameterButtonPiano inherits Rectangle {
+    in-out property <PluginParameter> parameter;
+    in property <image> icon;
+
+    property <bool> changing;
+    callback start-change();
+    callback changed(float);
+    callback end-change();
+    callback set-string(string);
+    
+    border-color: white;
+    border-width: 3px;
+    border-radius: 5px;
+    background: parameter.value == 1.0 ? touch.has-hover ? #1d2a75 : #4242ff : touch.has-hover ? #1c2141 : #272753;
+
+    touch := TouchArea {
+        property <float> pressed-value;
+        double-clicked => {
+            root.changed(root.parameter.default-value);
+        }
+        clicked => {
+            root.changed(root.parameter.value == 1.0 ? 0.0 : 1.0);
+        }
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left) {
+                if (event.kind == PointerEventKind.down) {
+                    self.pressed-value = root.parameter.value;
+                    root.start-change();
+                    root.changing = true;
+                } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                    root.end-change();
+                    root.changing = false;
+                }
+            }
+            if (root.changing && event.kind == PointerEventKind.cancel) {
+                root.end-change();
+                root.changing = false;
+            }
+        }
+    }
+}

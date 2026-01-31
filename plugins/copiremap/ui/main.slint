@@ -1,0 +1,959 @@
+import { PluginParameter } from "parameter.slint";
+import { ParameterKnob } from "knob.slint";
+import { ParameterSlider } from "slider.slint";
+import { ParameterButtonBypass } from "button_bypass.slint";
+import { ParameterButtonPiano } from "button_piano.slint";
+import "resource/font/Fingercute-Regular.ttf";
+import { VerticalBox, Button, Slider } from "std-widgets.slint";
+import { PianoBar } from "piano_bar.slint";
+import { ParameterButton } from "button.slint";
+
+export component PluginWindow {
+    in-out property <PluginParameter> scale-gui;
+    in-out property <PluginParameter> bypass;
+    in-out property <PluginParameter> dry-gain;
+    in-out property <PluginParameter> wet-gain;
+    in-out property <PluginParameter> lhf-gain;
+    in-out property <PluginParameter> low-note;
+    in-out property <PluginParameter> high-note;
+    in-out property <PluginParameter> low-note-off-mute;
+    in-out property <PluginParameter> high-note-off-mute;
+
+    in-out property <PluginParameter> resonance;
+
+    in-out property <PluginParameter> pitch-shift;
+    in-out property <PluginParameter> pitch-shift-node;
+    in-out property <PluginParameter> pitch-shift-over-sampling;
+    in-out property <PluginParameter> pitch-shift-window-duration-ms;
+
+    in-out property <PluginParameter> global-threshold;
+    in-out property <PluginParameter> global-threshold-flip;
+    in-out property <PluginParameter> global-threshold-attack;
+    in-out property <PluginParameter> global-threshold-release;
+
+    in-out property <PluginParameter> threshold;
+    in-out property <PluginParameter> threshold-flip;
+    in-out property <PluginParameter> threshold-attack;
+    in-out property <PluginParameter> threshold-release;
+
+    in-out property <PluginParameter> note-mode-midi;
+    in-out property <PluginParameter> mute-off-key;
+    in-out property <PluginParameter> round-up;
+    in-out property <PluginParameter> find-off-key;
+    in-out property <PluginParameter> in-key-gain;
+    in-out property <PluginParameter> tuning-gain;
+    in-out property <PluginParameter> off-key-gain;
+    in-out property <PluginParameter> note-c;
+    in-out property <PluginParameter> note-c-sharp;
+    in-out property <PluginParameter> note-d;
+    in-out property <PluginParameter> note-d-sharp;
+    in-out property <PluginParameter> note-e;
+    in-out property <PluginParameter> note-f;
+    in-out property <PluginParameter> note-f-sharp;
+    in-out property <PluginParameter> note-g;
+    in-out property <PluginParameter> note-g-sharp;
+    in-out property <PluginParameter> note-a;
+    in-out property <PluginParameter> note-a-sharp;
+    in-out property <PluginParameter> note-b;
+    
+    in-out property <PluginParameter> hz-center;
+    in-out property <PluginParameter> hz-tuning;
+
+    property <bool> gui_changing;
+    in property <int> latency;
+    callback start-change(PluginParameter);
+    callback changed(PluginParameter, float);
+    callback end-change(PluginParameter);
+    callback set-string(PluginParameter, string);
+    width: 800px;
+    height: 380px;
+    
+    Rectangle {
+        background: @linear-gradient(120deg, #2256ff 0%, #ff3b3b 50%, #ffbb00 100%);
+        Rectangle {
+            background: @linear-gradient(180deg, #ffffff00 50%, #0000006f 100%);
+            // FIXME: Workaround for taking focus off TextInput by clicking outside it
+            TouchArea {
+                FocusScope {
+                    enabled: true;
+                }
+            }
+
+            VerticalLayout {
+                padding: 8px;
+                spacing: 7px;
+                Rectangle {
+                    height: 60px;
+                    border-radius: 5px;
+                    background: #00000061;
+                    border-color: #ffffffb5;
+                    border-width: 3px;
+                    HorizontalLayout {
+                        padding: 5px;
+                        alignment: space-between;
+                        HorizontalLayout {
+                            spacing: 5px;
+                            alignment: start;
+                            ParameterButtonBypass {
+                                height: 50px;
+                                width: 50px;
+                                icon: @image-url("resource/img/LogicColour.png");
+                                parameter: bypass;
+                                start-change => {
+                                    start-change(bypass);
+                                }
+                                changed(value) => {
+                                    changed(bypass, value);
+                                }
+                                end-change => {
+                                    end-change(bypass);
+                                }
+                                set-string(string) => {
+                                    set-string(bypass, string);
+                                }
+                            }
+
+                            Text {
+                                text: "CoPiReMap";
+                                font-size: 55px;
+                                color: white;
+                                font-family: "Fingercute";
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 10px;
+                            padding: 3px;
+                            alignment: start;
+                            ParameterKnob {
+                                height: 35px;
+                                parameter: dry-gain;
+                                text: "Dry Gain";
+                                // FIXME: Callbacks need to be mapped manually
+                                start-change => {
+                                    start-change(dry-gain);
+                                }
+                                changed(value) => {
+                                    changed(dry-gain, value);
+                                }
+                                end-change => {
+                                    end-change(dry-gain);
+                                }
+                                set-string(string) => {
+                                    set-string(dry-gain, string);
+                                }
+                            }
+
+                            ParameterKnob {
+                                height: 35px;
+                                parameter: wet-gain;
+                                text: "Wet Gain";
+                                blue: true;
+                                // FIXME: Callbacks need to be mapped manually
+                                start-change => {
+                                    start-change(wet-gain);
+                                }
+                                changed(value) => {
+                                    changed(wet-gain, value);
+                                }
+                                end-change => {
+                                    end-change(wet-gain);
+                                }
+                                set-string(string) => {
+                                    set-string(wet-gain, string);
+                                }
+                            }
+
+                            ParameterKnob {
+                                height: 35px;
+                                parameter: lhf-gain;
+                                text: "L/H F dB";
+                                // FIXME: Callbacks need to be mapped manually
+                                start-change => {
+                                    start-change(lhf-gain);
+                                }
+                                changed(value) => {
+                                    changed(lhf-gain, value);
+                                }
+                                end-change => {
+                                    end-change(lhf-gain);
+                                }
+                                set-string(string) => {
+                                    set-string(lhf-gain, string);
+                                }
+                            }
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 285px;
+                    border-radius: 5px;
+                    background: #00000061;
+                    border-color: #ffffffb5;
+                    border-width: 3px;
+                    VerticalLayout {
+                        HorizontalLayout {
+                            padding: 10px;
+                            spacing: 5px;
+                            alignment: space-between;
+                            ParameterButton {
+                                height: 35px;
+                                width: 35px;
+                                icon: @image-url("resource/img/mute_icon.svg");
+                                parameter: low-note-off-mute;
+                                start-change => {
+                                    start-change(low-note-off-mute);
+                                }
+                                changed(value) => {
+                                    changed(low-note-off-mute, value);
+                                }
+                                end-change => {
+                                    end-change(low-note-off-mute);
+                                }
+                                set-string(string) => {
+                                    set-string(low-note-off-mute, string);
+                                }
+                            }
+                            PianoBar {
+                                width: parent.width - 100px;
+                                height: 35px;
+                                low-note: low-note;
+                                high-note: high-note;
+                                start-change(parameter) => {
+                                    start-change(parameter);
+                                }
+                                changed(parameter, value) => {
+                                    changed(parameter, value);
+                                }
+                                end-change(parameter) => {
+                                    end-change(parameter);
+                                }
+                                set-string(parameter, string) => {
+                                    set-string(parameter, string);
+                                }
+                            }
+                            ParameterButton {
+                                height: 35px;
+                                width: 35px;
+                                icon: @image-url("resource/img/mute_icon.svg");
+                                parameter: high-note-off-mute;
+                                start-change => {
+                                    start-change(high-note-off-mute);
+                                }
+                                changed(value) => {
+                                    changed(high-note-off-mute, value);
+                                }
+                                end-change => {
+                                    end-change(high-note-off-mute);
+                                }
+                                set-string(string) => {
+                                    set-string(high-note-off-mute, string);
+                                }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            alignment: space-between;
+                            padding-top: 10px;
+                            padding-left: 20px;
+                            padding-right: 20px;
+                            ParameterSlider {
+                                height: 10px;
+                                width: 100px;
+                                text: "Hz Center";
+                                parameter: hz-center;
+                
+                                // FIXME: Callbacks need to be mapped manually
+                                start-change => { start-change(hz-center); }
+                                changed(value) => { changed(hz-center, value); }
+                                end-change => { end-change(hz-center); }
+                                set-string(string) => { set-string(hz-center, string); }
+                            }
+                            HorizontalLayout {
+                                spacing: 15px;
+                                ParameterKnob {
+                                    y: 5px;
+                                    height: 45px;
+                                    blue: true;
+                                    parameter: in-key-gain;
+                                    text: "In Key Gain";
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => {
+                                        start-change(in-key-gain);
+                                    }
+                                    changed(value) => {
+                                        changed(in-key-gain, value);
+                                    }
+                                    end-change => {
+                                        end-change(in-key-gain);
+                                    }
+                                    set-string(string) => {
+                                        set-string(in-key-gain, string);
+                                    }
+                                }
+                                ParameterKnob {
+                                    height: 45px;
+                                    y: 5px;
+                                    blue: true;
+                                    parameter: tuning-gain;
+                                    text: "Tuning Gain";
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => {
+                                        start-change(tuning-gain);
+                                    }
+                                    changed(value) => {
+                                        changed(tuning-gain, value);
+                                    }
+                                    end-change => {
+                                        end-change(tuning-gain);
+                                    }
+                                    set-string(string) => {
+                                        set-string(lhf-gain, string);
+                                    }
+                                }
+                                ParameterSlider {
+                                    height: 13px;
+                                    width: 35px;
+                                    vertical: true;
+                                    switch: true;
+                                    text: "Mute OffKey";
+                                    parameter: mute-off-key;
+                    
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => { start-change(mute-off-key); }
+                                    changed(value) => { changed(mute-off-key, value); }
+                                    end-change => { end-change(mute-off-key); }
+                                    set-string(string) => { set-string(mute-off-key, string); }
+                                }
+                            }
+                            VerticalLayout {
+                                spacing: 5px;
+                                Rectangle {
+                                    HorizontalLayout {
+                                        padding-left: 10px;
+                                        spacing: 3px;
+                                        z: 1;
+                                        ParameterButtonPiano {
+                                            height: 45px;
+                                            width: 25px;
+                                            parameter: note-c-sharp;
+                                            start-change => {
+                                                start-change(note-c-sharp);
+                                            }
+                                            changed(value) => {
+                                                changed(note-c-sharp, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-c-sharp);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-c-sharp, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 45px;
+                                            width: 25px;
+                                            parameter: note-d-sharp;
+                                            start-change => {
+                                                start-change(note-d-sharp);
+                                            }
+                                            changed(value) => {
+                                                changed(note-d-sharp, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-d-sharp);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-d-sharp, string);
+                                            }
+                                        }
+        
+                                        Rectangle {
+                                            height: 45px;
+                                            width: 15px;
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 45px;
+                                            width: 25px;
+                                            parameter: note-f-sharp;
+                                            start-change => {
+                                                start-change(note-f-sharp);
+                                            }
+                                            changed(value) => {
+                                                changed(note-f-sharp, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-f-sharp);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-f-sharp, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 45px;
+                                            width: 25px;
+                                            parameter: note-g-sharp;
+                                            start-change => {
+                                                start-change(note-g-sharp);
+                                            }
+                                            changed(value) => {
+                                                changed(note-g-sharp, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-g-sharp);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-g-sharp, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 45px;
+                                            width: 25px;
+                                            parameter: note-a-sharp;
+                                            start-change => {
+                                                start-change(note-a-sharp);
+                                            }
+                                            changed(value) => {
+                                                changed(note-a-sharp, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-a-sharp);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-a-sharp, string);
+                                            }
+                                        }
+                                    }
+        
+                                    HorizontalLayout {
+                                        ParameterButtonPiano {
+                                            height: 75px;
+                                            width: 25px;
+                                            parameter: note-c;
+                                            start-change => {
+                                                start-change(note-c);
+                                            }
+                                            changed(value) => {
+                                                changed(note-c, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-c);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-c, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 75px;
+                                            width: 25px;
+                                            parameter: note-d;
+                                            start-change => {
+                                                start-change(note-d);
+                                            }
+                                            changed(value) => {
+                                                changed(note-d, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-d);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-d, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 75px;
+                                            width: 25px;
+                                            parameter: note-e;
+                                            start-change => {
+                                                start-change(note-e);
+                                            }
+                                            changed(value) => {
+                                                changed(note-e, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-e);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-e, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 75px;
+                                            width: 25px;
+                                            parameter: note-f;
+                                            start-change => {
+                                                start-change(note-f);
+                                            }
+                                            changed(value) => {
+                                                changed(note-f, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-f);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-f, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 75px;
+                                            width: 25px;
+                                            parameter: note-g;
+                                            start-change => {
+                                                start-change(note-g);
+                                            }
+                                            changed(value) => {
+                                                changed(note-g, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-g);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-g, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 75px;
+                                            width: 25px;
+                                            parameter: note-a;
+                                            start-change => {
+                                                start-change(note-a);
+                                            }
+                                            changed(value) => {
+                                                changed(note-a, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-a);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-a, string);
+                                            }
+                                        }
+        
+                                        ParameterButtonPiano {
+                                            height: 75px;
+                                            width: 25px;
+                                            parameter: note-b;
+                                            start-change => {
+                                                start-change(note-b);
+                                            }
+                                            changed(value) => {
+                                                changed(note-b, value);
+                                            }
+                                            end-change => {
+                                                end-change(note-b);
+                                            }
+                                            set-string(string) => {
+                                                set-string(note-b, string);
+                                            }
+                                        }
+                                    }
+                                }
+                                ParameterSlider {
+                                    height: 11px;
+                                    width: 130px;
+                                    x: 25px;
+                                    text: "Note Mode/Midi";
+                                    parameter: note-mode-midi;
+                    
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => { start-change(note-mode-midi); }
+                                    changed(value) => { changed(note-mode-midi, value); }
+                                    end-change => { end-change(note-mode-midi); }
+                                    set-string(string) => { set-string(note-mode-midi, string); }
+                                }
+                            }
+                            HorizontalLayout {
+                                spacing: 15px;
+                                ParameterSlider {
+                                    height: 13px;
+                                    width: 35px;
+                                    vertical: true;
+                                    blue: true;
+                                    text: "Round Up";
+                                    parameter: round-up;
+                                    switch: true;
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => { start-change(round-up); }
+                                    changed(value) => { changed(round-up, value); }
+                                    end-change => { end-change(round-up); }
+                                    set-string(string) => { set-string(round-up, string); }
+                                }
+                                ParameterKnob {
+                                    height: 45px;
+                                    parameter: find-off-key;
+                                    y: 5px;
+                                    text: "Find Off Key";
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => {
+                                        start-change(find-off-key);
+                                    }
+                                    changed(value) => {
+                                        changed(find-off-key, value);
+                                    }
+                                    end-change => {
+                                        end-change(find-off-key);
+                                    }
+                                    set-string(string) => {
+                                        set-string(find-off-key, string);
+                                    }
+                                }
+                                ParameterKnob {
+                                    height: 45px;
+                                    y: 5px;
+                                    parameter: off-key-gain;
+                                    text: "Off Key Gain";
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => {
+                                        start-change(off-key-gain);
+                                    }
+                                    changed(value) => {
+                                        changed(off-key-gain, value);
+                                    }
+                                    end-change => {
+                                        end-change(off-key-gain);
+                                    }
+                                    set-string(string) => {
+                                        set-string(off-key-gain, string);
+                                    }
+                                }
+                            }
+                            ParameterSlider {
+                                height: 10px;
+                                width: 100px;
+                                blue: true;
+                                text: "Hz Tuning";
+                                parameter: hz-tuning;
+
+                                // FIXME: Callbacks need to be mapped manually
+                                start-change => { start-change(hz-tuning); }
+                                changed(value) => { changed(hz-tuning, value); }
+                                end-change => { end-change(hz-tuning); }
+                                set-string(string) => { set-string(hz-tuning, string); }
+                            }
+                        }
+                        HorizontalLayout {
+                            alignment: space-between;
+                            padding-left: 15px;
+                            padding-right: 15px;
+                            VerticalLayout {
+                                spacing: 40px;
+
+                                ParameterSlider {
+                                    height: 10px;
+                                    width: 200px;
+                                    blue: true;
+                                    text: "Global Threshold";
+                                    parameter: global-threshold;
+    
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => { start-change(global-threshold); }
+                                    changed(value) => { changed(global-threshold, value); }
+                                    end-change => { end-change(global-threshold); }
+                                    set-string(string) => { set-string(global-threshold, string); }
+                                }
+                                HorizontalLayout {
+                                    alignment: space-around;
+                                    ParameterKnob {
+                                        height: 45px;
+                                        y: 10px;
+                                        blue: true;
+                                        parameter: global-threshold-attack;
+                                        text: "Global Attack";
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => {
+                                            start-change(global-threshold-attack);
+                                        }
+                                        changed(value) => {
+                                            changed(global-threshold-attack, value);
+                                        }
+                                        end-change => {
+                                            end-change(global-threshold-attack);
+                                        }
+                                        set-string(string) => {
+                                            set-string(global-threshold-attack, string);
+                                        }
+                                    }
+                                    ParameterKnob {
+                                        height: 45px;
+                                        y: 10px;
+                                        blue: true;
+                                        parameter: global-threshold-release;
+                                        text: "Global Release";
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => {
+                                            start-change(global-threshold-release);
+                                        }
+                                        changed(value) => {
+                                            changed(global-threshold-release, value);
+                                        }
+                                        end-change => {
+                                            end-change(global-threshold-release);
+                                        }
+                                        set-string(string) => {
+                                            set-string(global-threshold-release, string);
+                                        }
+                                    }
+                                    ParameterSlider {
+                                        height: 13px;
+                                        width: 35px;
+                                        vertical: true;
+                                        blue: true;
+                                        text: "Global Threshold Flip";
+                                        parameter: global-threshold-flip;
+                                        switch: true;
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => { start-change(global-threshold-flip); }
+                                        changed(value) => { changed(global-threshold-flip, value); }
+                                        end-change => { end-change(global-threshold-flip); }
+                                        set-string(string) => { set-string(global-threshold-flip, string); }
+                                    }
+                                }
+                            }
+                            HorizontalLayout {
+                                padding-top: 50px;
+                                spacing: 20px;
+                                alignment: space-around;
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                    alignment: space-around;
+                                    ParameterKnob {
+                                        height: 40px;
+                                        y: 10px;
+
+                                        parameter: pitch-shift-over-sampling;
+                                        text: "P/S O-sampling";
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => {
+                                            start-change(pitch-shift-over-sampling);
+                                        }
+                                        changed(value) => {
+                                            changed(pitch-shift-over-sampling, value);
+                                        }
+                                        end-change => {
+                                            end-change(pitch-shift-over-sampling);
+                                        }
+                                        set-string(string) => {
+                                            set-string(pitch-shift-over-sampling, string);
+                                        }
+                                    }
+                                    ParameterSlider {
+                                        height: 12px;
+                                        width: 30px;
+                                        vertical: true;
+                                        text: "Pitch Shift";
+                                        parameter: pitch-shift;
+                                        switch: true;
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => { start-change(pitch-shift); }
+                                        changed(value) => { changed(pitch-shift, value); }
+                                        end-change => { end-change(pitch-shift); }
+                                        set-string(string) => { set-string(pitch-shift, string); }
+                                    }
+                                }
+                                ParameterKnob {
+                                    height: 55px;
+                                    parameter: resonance;
+                                    blue: true;
+                                    text: "Resonance";
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => {
+                                        start-change(resonance);
+                                    }
+                                    changed(value) => {
+                                        changed(resonance, value);
+                                    }
+                                    end-change => {
+                                        end-change(resonance);
+                                    }
+                                    set-string(string) => {
+                                        set-string(resonance, string);
+                                    }
+                                }
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                    alignment: space-around;
+                                    ParameterSlider {
+                                        height: 12px;
+                                        width: 30px;
+                                        vertical: true;
+                                        text: "Pitch Shift Node";
+                                        parameter: pitch-shift-node;
+                                        switch: true;
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => { start-change(pitch-shift-node); }
+                                        changed(value) => { changed(pitch-shift-node, value); }
+                                        end-change => { end-change(pitch-shift-node); }
+                                        set-string(string) => { set-string(pitch-shift-node, string); }
+                                    }
+                                    ParameterKnob {
+                                        height: 40px;
+                                        y: 10px;
+                                        parameter: pitch-shift-window-duration-ms;
+                                        text: "P/S Window/ms";
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => {
+                                            start-change(pitch-shift-window-duration-ms);
+                                        }
+                                        changed(value) => {
+                                            changed(pitch-shift-window-duration-ms, value);
+                                        }
+                                        end-change => {
+                                            end-change(pitch-shift-window-duration-ms);
+                                        }
+                                        set-string(string) => {
+                                            set-string(pitch-shift-window-duration-ms, string);
+                                        }
+                                    }
+                                }
+                            }
+                            VerticalLayout {
+                                spacing: 40px;
+
+                                ParameterSlider {
+                                    height: 10px;
+                                    width: 200px;
+                                    text: "Threshold";
+                                    parameter: threshold;
+    
+                                    // FIXME: Callbacks need to be mapped manually
+                                    start-change => { start-change(threshold); }
+                                    changed(value) => { changed(threshold, value); }
+                                    end-change => { end-change(threshold); }
+                                    set-string(string) => { set-string(threshold, string); }
+                                }
+                                HorizontalLayout {
+                                    alignment: space-around;
+                                    ParameterKnob {
+                                        height: 45px;
+                                        y: 10px;
+                                        parameter: threshold-attack;
+                                        text: "Attack";
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => {
+                                            start-change(threshold-attack);
+                                        }
+                                        changed(value) => {
+                                            changed(threshold-attack, value);
+                                        }
+                                        end-change => {
+                                            end-change(threshold-attack);
+                                        }
+                                        set-string(string) => {
+                                            set-string(threshold-attack, string);
+                                        }
+                                    }
+                                    ParameterKnob {
+                                        height: 45px;
+                                        y: 10px;
+                                        parameter: threshold-release;
+                                        text: "Release";
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => {
+                                            start-change(threshold-release);
+                                        }
+                                        changed(value) => {
+                                            changed(threshold-release, value);
+                                        }
+                                        end-change => {
+                                            end-change(threshold-release);
+                                        }
+                                        set-string(string) => {
+                                            set-string(threshold-release, string);
+                                        }
+                                    }
+                                    ParameterSlider {
+                                        height: 13px;
+                                        width: 35px;
+                                        vertical: true;
+                                        text: "Threshold Flip";
+                                        parameter: threshold-flip;
+                                        switch: true;
+                                        // FIXME: Callbacks need to be mapped manually
+                                        start-change => { start-change(threshold-flip); }
+                                        changed(value) => { changed(threshold-flip, value); }
+                                        end-change => { end-change(threshold-flip); }
+                                        set-string(string) => { set-string(threshold-flip, string); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                }
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                VerticalLayout {
+                    alignment: end;
+                    Rectangle {
+                        width: 20px;
+                        height: 20px;
+                        handle := Image {
+                            colorize: touch.has-hover && touch.pressed ? #aaaaaa : touch.has-hover ? #e0dfdf : #ffffff;
+                            source: @image-url("resource/img/resize-right.svg");
+                        }
+
+                        touch := TouchArea {
+                            property <float> pressed-value;
+                            pointer-event(event) => {
+                                if (event.button == PointerEventButton.left) {
+                                    if (event.kind == PointerEventKind.down) {
+                                        self.pressed-value = root.scale_gui.value;
+                                        root.start-change(root.scale_gui);
+                                        root.gui_changing = true;
+                                    } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                                        root.end-change(root.scale_gui);
+                                        root.gui_changing = false;
+                                    }
+                                }
+                                if (root.gui_changing && event.kind == PointerEventKind.cancel) {
+                                    root.end-change(root.scale_gui);
+                                    root.gui_changing = false;
+                                }
+                            }
+                            moved => {
+                                if (self.enabled && self.pressed) {
+                                    root.changed(scale_gui, clamp(self.pressed-value + (((touch.mouse-y - touch.pressed-y) + (touch.mouse-x - touch.pressed-x)) / 2) / (root.width - handle.width), 0.0, 1.0));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            VerticalLayout {
+                alignment: end;
+                padding-bottom: 3px;
+                padding-left: 10px;
+                padding-right: 20px;
+                spacing: 0px;
+                HorizontalLayout {
+                    alignment: space-between;
+                    Text {
+                        text: "LogicCuteGuy";
+                        font-size: 15px;
+                        color: white;
+                        font-family: "Fingercute";
+                    }
+
+                    Text {
+                        text: "Latency: " + root.latency + "smp";
+                        font-size: 15px;
+                        color: white;
+                        font-family: "Fingercute";
+                    }
+                }
+            }
+        }
+    }
+}

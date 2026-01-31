@@ -1,0 +1,133 @@
+import { VerticalBox } from "std-widgets.slint";
+import { PluginParameter } from "parameter.slint";
+
+export component ParameterSlider inherits Rectangle {
+    in-out property <PluginParameter> parameter;
+    property <bool> changing;
+    callback start-change();
+    callback changed(float);
+    callback end-change();
+    callback set-string(string);
+    in property <bool> blue: false;
+    in property <bool> vertical: false;
+    in property <bool> switch: false;
+    in-out property <string> text;
+    
+    border-color: root.background.darker(25%);
+    function start-editing(){
+        edit-field.visible = true;
+        edit-text-field.text = root.parameter.display-value;
+        edit-text-field.focus();
+        edit-text-field.select-all();
+    }
+    
+    VerticalLayout {
+        spacing: root.height * 45%;
+        texr := Rectangle {
+            Text {
+                text: text;
+                color: white;
+                font-size: vertical ? root.height * 75%: root.height * 120%;
+            }
+        }
+    
+        Rectangle {
+            x: vertical ? root.width / 2 - parent.height / 2 : 0;
+            width: vertical ? parent.height : root.width;
+            height: vertical ? root.width : parent.height;
+            border-radius: root.height / 2;
+            background: touch.pressed ? #ddd : #eee;
+            border-width: 1px;
+            modulation := Rectangle {
+                height: root.height;
+                width: root.height;
+                border-radius: self.height / 2;
+                background: handle.background.with-alpha(25%);
+                border-color: self.background.darker(15%);
+                y: vertical ? (root.width - self.width) * root.parameter.value : 0;
+                x: vertical ? 0 : (root.width - self.width) * root.parameter.value;
+            }
+            handle := Rectangle {
+                height: root.height;
+                width: root.height;
+                border-width: 3px;
+                border-radius: self.height / 2;
+                background: blue ? (touch.pressed ? #d9ff4f: touch.has-hover ? #001c99 : #2f2fef) : (touch.pressed ? #1947ff: touch.has-hover ? #817802 : #f3f32c);
+                border-color: self.background.darker(15%);
+                y: vertical ? (root.width - self.width) * root.parameter.value : 0;
+                x: vertical ? 0 : (root.width - self.width) * root.parameter.value;
+            }
+            touch := TouchArea {
+                property <float> pressed-value;
+                double-clicked => {
+                    root.changed(root.parameter.default-value);
+                }
+                clicked => {
+                    root.switch ? root.changed(root.parameter.value == 1.0 ? 0.0 : 1.0) : root.changed(root.parameter.value);
+                }
+                pointer-event(event) => {
+                    if (event.button == PointerEventButton.left) {
+                        if (event.kind == PointerEventKind.down) {
+                            self.pressed-value = root.parameter.value;
+                            root.start-change();
+                            root.changing = true;
+                            if (event.modifiers.control || event.modifiers.meta) {
+                                start-editing();
+                            }
+                        } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                            root.end-change();
+                            root.changing = false;
+                        }
+                    }
+                    if (root.changing && event.kind == PointerEventKind.cancel) {
+                        root.end-change();
+                        root.changing = false;
+                    }
+                }
+                moved => {
+                    if (self.enabled && self.pressed) {
+                        root.changed(clamp(self.pressed-value + (vertical ? touch.mouse-y - touch.pressed-y : touch.mouse-x - touch.pressed-x) / (root.width - handle.width), 0.0, 1.0));
+                    }
+                }
+            }
+        }
+        
+    
+        value-field := Rectangle {
+            width: parent.width;
+            height: root.height * 100%;
+            background: white.transparentize(25%);
+            border-radius: 10px;
+            Text {
+                text: root.parameter.display-value;
+                font-size: root.height * 80%;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+    
+            TouchArea {
+                clicked => {
+                    start-editing();
+                }
+            }
+    
+            edit-field := Rectangle {
+                background: white;
+                border-radius: 10px;
+                visible: false;
+                edit-text-field := TextInput {
+                    font-size: root.height * 80%;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    single-line: true;
+                    accepted() => {
+                        edit-field.visible = false;
+                        root.set-string(self.text);
+                    }
+                }
+            }
+        }
+    }
+
+    
+}

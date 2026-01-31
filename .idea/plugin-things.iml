@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/examples/demo/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/nih_plug_slint/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugin-canvas-slint/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugin-canvas/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/plugins/copiremap/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/xtask/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/iir_filters/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/pitch_shift/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/pitch_shift/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/simple-eq/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

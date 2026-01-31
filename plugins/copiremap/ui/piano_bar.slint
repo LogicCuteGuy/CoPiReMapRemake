@@ -1,0 +1,210 @@
+import { VerticalBox } from "std-widgets.slint";
+import { PluginParameter } from "parameter.slint";
+
+export component PianoBar inherits Rectangle {
+    in-out property <PluginParameter> low-note;
+    in-out property <PluginParameter> high-note;
+    property <bool> changing;
+    callback start-change(PluginParameter);
+    callback changed(PluginParameter, float);
+    callback end-change(PluginParameter);
+    callback set-string(PluginParameter, string);
+    in property <bool> vertical: false;
+
+    width: 100px;
+    height: 100px;
+
+    border-width: 10px;
+    
+    border-color: root.background.darker(25%);
+    function start-editing(){
+        edit-field.visible = true;
+        edit-text-field.text = root.low-note.display-value;
+        edit-text-field.focus();
+        edit-text-field.select-all();
+    }
+
+    function start-editing2(){
+        edit-field2.visible = true;
+        edit-text-field2.text = root.high-note.display-value;
+        edit-text-field2.focus();
+        edit-text-field2.select-all();
+    }
+    
+    
+    VerticalLayout {
+        spacing: 10px;
+    
+        Rectangle {
+            x: vertical ? root.width / 2 - parent.height / 2 : 0;
+            width: vertical ? parent.height : root.width;
+            height: vertical ? root.width : parent.height;
+            background: #eee;
+            border-width: 20px;
+            border-color: beige;
+            HorizontalLayout {
+                for index in 96: piano := Rectangle {
+                    width: root.width / 96;
+                    property <int> cal: Math.mod(index, 12);
+                    background: cal == 1 || cal == 3 || cal == 6 || cal == 8 || cal == 10 ? black : white;
+                }
+            }
+            handle := Rectangle {
+                height: root.height;
+                width: root.width / 96;
+                border-width: 3px;
+                background: touch.pressed ? #d9ff4f: touch.has-hover ? #001c99 : #2f2fef;
+                border-color: self.background.darker(15%);
+                y: vertical ? (root.width - self.width) * root.low-note.value : 0;
+                x: vertical ? 0 : (root.width - self.width) * root.low-note.value;
+                touch := TouchArea {
+                    property <float> pressed-value;
+                    double-clicked => {
+                        root.changed(low-note, root.low-note.default-value);
+                    }
+                    pointer-event(event) => {
+                        if (event.button == PointerEventButton.left) {
+                            if (event.kind == PointerEventKind.down) {
+                                self.pressed-value = root.low-note.value;
+                                root.start-change(low-note);
+                                root.changing = true;
+                                if (event.modifiers.control || event.modifiers.meta) {
+                                    start-editing();
+                                }
+                            } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                                root.end-change(low-note);
+                                root.changing = false;
+                            }
+                        }
+                        if (root.changing && event.kind == PointerEventKind.cancel) {
+                            root.end-change(low-note);
+                            root.changing = false;
+                        }
+                    }
+                    moved => {
+                        if (self.enabled && self.pressed) {
+                            root.changed(low-note, clamp(self.pressed-value + (vertical ? touch.mouse-y - touch.pressed-y : touch.mouse-x - touch.pressed-x) / (root.width - parent.width), 0.0, 1.0));
+                        }
+                    }
+                }
+            }
+            handle2 := Rectangle {
+                height: root.height;
+                width: root.width / 96;
+                border-width: 3px;
+                background: touch2.pressed ? #1947ff: touch2.has-hover ? #817802 : #f3f32c;
+                border-color: self.background.darker(15%);
+                y: vertical ? (root.width - self.width) * root.high-note.value : 0;
+                x: vertical ? 0 : (root.width - self.width) * root.high-note.value;
+                touch2 := TouchArea {
+                    property <float> pressed-value;
+                    double-clicked => {
+                        root.changed(high-note, root.high-note.default-value);
+                    }
+                    pointer-event(event) => {
+                        if (event.button == PointerEventButton.left) {
+                            if (event.kind == PointerEventKind.down) {
+                                self.pressed-value = root.high-note.value;
+                                root.start-change(high-note);
+                                root.changing = true;
+                                if (event.modifiers.control || event.modifiers.meta) {
+                                    start-editing();
+                                }
+                            } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                                root.end-change(high-note);
+                                root.changing = false;
+                            }
+                        }
+                        if (root.changing && event.kind == PointerEventKind.cancel) {
+                            root.end-change(high-note);
+                            root.changing = false;
+                        }
+                    }
+                    moved => {
+                        if (self.enabled && self.pressed) {
+                            root.changed(high-note, clamp(self.pressed-value + (vertical ? touch2.mouse-y - touch2.pressed-y : touch2.mouse-x - touch2.pressed-x) / (root.width - parent.width), 0.0, 1.0));
+                        }
+                    }
+                }
+            }
+        }
+        
+        Rectangle {
+            value-field := Rectangle {
+                width: root.width / 96 + 30px;
+                height: 15px;
+                x: handle.x - handle.width * 2;
+                background: white.transparentize(25%);
+                border-radius: 10px;
+                Text {
+                    text: root.low-note.display-value;
+                    font-size: 15px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+        
+                TouchArea {
+                    clicked => {
+                        start-editing();
+                    }
+                }
+        
+                edit-field := Rectangle {
+                    background: white;
+                    border-radius: 10px;
+                    visible: false;
+                    edit-text-field := TextInput {
+                        font-size: 15px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        single-line: true;
+                        accepted() => {
+                            edit-field.visible = false;
+                            root.set-string(low-note, self.text);
+                        }
+                    }
+                }
+            }
+    
+            value-field2 := Rectangle {
+                width: root.width / 96 + 30px;
+                height: 15px;
+                x: handle2.x - handle2.width * 2;
+                background: white.transparentize(25%);
+                border-radius: 10px;
+                Text {
+                    text: root.high-note.display-value;
+                    font-size: 15px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+        
+                TouchArea {
+                    clicked => {
+                        start-editing2();
+                    }
+                }
+        
+                edit-field2 := Rectangle {
+                    background: white;
+                    border-radius: 10px;
+                    visible: false;
+                    edit-text-field2 := TextInput {
+                        font-size: 15px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        single-line: true;
+                        accepted() => {
+                            edit-field.visible = false;
+                            root.set-string(high-note, self.text);
+                        }
+                    }
+                }
+            }
+        }
+    
+        
+    }
+
+    
+}

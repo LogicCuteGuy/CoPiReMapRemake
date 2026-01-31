@@ -1,0 +1,50 @@
+import { VerticalBox } from "std-widgets.slint";
+import { PluginParameter } from "parameter.slint";
+
+export component ParameterButtonBypass inherits Rectangle {
+    in-out property <PluginParameter> parameter;
+    in property <image> icon;
+
+    property <bool> changing;
+    callback start-change();
+    callback changed(float);
+    callback end-change();
+    callback set-string(string);
+    
+    border-color: white;
+    border-width: 3px;
+    border-radius: 5px;
+    background: touch.pressed ? #1a1e08 : touch.has-hover ? #1c2242 : #272753;
+    Image {
+        width: root.width - 5px;
+        height: root.width - 5px;
+        colorize: root.parameter.value == 1.0 ? black : rgba(0,0,0,0);
+        source: icon;
+    }
+
+    touch := TouchArea {
+        property <float> pressed-value;
+        double-clicked => {
+            root.changed(root.parameter.default-value);
+        }
+        clicked => {
+            root.changed(root.parameter.value == 1.0 ? 0.0 : 1.0);
+        }
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left) {
+                if (event.kind == PointerEventKind.down) {
+                    self.pressed-value = root.parameter.value;
+                    root.start-change();
+                    root.changing = true;
+                } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                    root.end-change();
+                    root.changing = false;
+                }
+            }
+            if (root.changing && event.kind == PointerEventKind.cancel) {
+                root.end-change();
+                root.changing = false;
+            }
+        }
+    }
+}

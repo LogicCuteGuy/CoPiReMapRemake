@@ -1,0 +1,17 @@
+[package]
+name = "pitch_shift"
+version = "1.0.0"
+edition = "2021"
+authors = [ "Nathan ROYER <nathan.royer.pro@gmail.com>" ]
+description = "pitch-shifting using the phase vocoder technique"
+license = "MIT"
+categories = [ "algorithms", "multimedia::audio", "command-line-utilities" ]
+repository = "https://github.com/NathanRoyer/pitch_shift"
+readme = "README.md"
+
+[dependencies]
+realfft.workspace = true
+
+[dev-dependencies]
+hound = "3.4"
+pico-args = "0.5.0"

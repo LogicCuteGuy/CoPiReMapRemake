@@ -1,0 +1,16 @@
+[package]
+name = "simple-eq"
+description = "A simple audio equalizer"
+version = "0.1.0"
+authors = ["Mike Hildendorf <mike@hilgendorf.audio>"]
+edition = "2018"
+license = "MIT" 
+
+[features]
+no_std = []
+
+[dependencies]
+nalgebra = "0.32.5"
+
+[profile.release]
+debug = true

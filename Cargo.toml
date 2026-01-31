@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+    "plugins/copiremap",
+    "xtask",
+    "lib/pitch_shift",
+    "lib/simple-eq"
+]
+
+[workspace.dependencies]
+cursor-icon = "1.1"
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug/" }
+nih_plug_iced = { git = "https://github.com/robbert-vdh/nih-plug/" }
+nih_plug_vizia = { git = "https://github.com/robbert-vdh/nih-plug/" }
+pitch_shift = { path = "lib/pitch_shift" }
+simple-eq = { path = "lib/simple-eq" }
+realfft = "3.3.0"
+num-traits = "0.2.18"
+thiserror = "1.0.58"
+#rust-music-theory = "0.2.0"
+serde = { version = "1.0.198", features = ["derive"] }
+crossbeam = "0.8.4"
+atomic_float = "0.1.0"
